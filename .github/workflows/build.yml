@@ -32,18 +32,37 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Auto-Generate Dummy Configs & Keys
+      - name: Auto-Generate Dynamic Configs & Keys
         run: |
-          # 1. Environment dummy files
+          # 1. Create essential environment files
           touch .env.example .env local.properties
 
-          # 2. Dummy Google Services JSON (if needed by plugins)
-          mkdir -p app
-          if [ ! -f app/google-services.json ]; then
-            echo '{"project_info":{"project_number":"0","project_id":"dummy"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.example.app"}}}]}' > app/google-services.json
-          fi
+          # 2. Extract real package name dynamically or fallback
+          PKG_NAME=$(grep -oP 'package="\K[^"]+' app/src/main/AndroidManifest.xml 2>/dev/null || grep -oP 'namespace\s+["'\'']\K[^"'\'']+' app/build.gradle* 2>/dev/null || grep -oP 'applicationId\s+["'\'']\K[^"'\'']+' app/build.gradle* 2>/dev/null || echo "com.example.app")
+          echo "Detected Package Name: $PKG_NAME"
 
-          # 3. Create missing debug.keystore if required
+          # 3. Create matched google-services.json
+          mkdir -p app
+          cat <<EOF > app/google-services.json
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "dummy-project"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:0:android:000000000000",
+                  "android_client_info": {
+                    "package_name": "$PKG_NAME"
+                  }
+                }
+              }
+            ]
+          }
+          EOF
+
+          # 4. Create missing debug.keystore if required
           if [ ! -f debug.keystore ] && [ ! -f app/debug.keystore ]; then
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
             cp debug.keystore app/debug.keystore 2>/dev/null || true
@@ -67,5 +86,4 @@ jobs:
         with:
           name: App-Debug-APK
           path: '**/build/outputs/apk/debug/*.apk'
-
 
