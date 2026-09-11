@@ -1,4 +1,5 @@
 
+
 name: Universal APK Builder
 
 on:
@@ -33,16 +34,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Auto-Generate Dynamic Configs & Keys
+      - name: Force Fix Google Services & Configs
         run: |
           # 1. Create essential environment files
           touch .env.example .env local.properties
 
-          # 2. Extract real package name dynamically
-          PKG_NAME=$(grep -oP 'package="\K[^"]+' app/src/main/AndroidManifest.xml 2>/dev/null || grep -oP 'namespace\s+["'\'']\K[^"'\'']+' app/build.gradle* 2>/dev/null || grep -oP 'applicationId\s+["'\'']\K[^"'\'']+' app/build.gradle* 2>/dev/null || echo "com.example.app")
-          echo "Detected Package Name: $PKG_NAME"
-
-          # 3. Write google-services.json with matched package name
+          # 2. Force overwrite google-services.json with explicit package match
           mkdir -p app
           cat <<EOF > app/google-services.json
           {
@@ -55,7 +52,15 @@ jobs:
                 "client_info": {
                   "mobilesdk_app_id": "1:0:android:000000000000",
                   "android_client_info": {
-                    "package_name": "$PKG_NAME"
+                    "package_name": "com.aistudio.pocketengine.krvyp"
+                  }
+                }
+              },
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:0:android:000000000001",
+                  "android_client_info": {
+                    "package_name": "com.example.medicinealarm"
                   }
                 }
               }
@@ -63,7 +68,7 @@ jobs:
           }
           EOF
 
-          # 4. Create missing debug.keystore if required
+          # 3. Create missing debug.keystore if required
           if [ ! -f debug.keystore ] && [ ! -f app/debug.keystore ]; then
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
             cp debug.keystore app/debug.keystore 2>/dev/null || true
@@ -87,4 +92,3 @@ jobs:
         with:
           name: App-Debug-APK
           path: '**/build/outputs/apk/debug/*.apk'
-
