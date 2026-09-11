@@ -1,3 +1,4 @@
+
 name: Universal APK Builder
 
 on:
@@ -37,11 +38,11 @@ jobs:
           # 1. Create essential environment files
           touch .env.example .env local.properties
 
-          # 2. Extract real package name dynamically or fallback
+          # 2. Extract real package name dynamically
           PKG_NAME=$(grep -oP 'package="\K[^"]+' app/src/main/AndroidManifest.xml 2>/dev/null || grep -oP 'namespace\s+["'\'']\K[^"'\'']+' app/build.gradle* 2>/dev/null || grep -oP 'applicationId\s+["'\'']\K[^"'\'']+' app/build.gradle* 2>/dev/null || echo "com.example.app")
           echo "Detected Package Name: $PKG_NAME"
 
-          # 3. Create matched google-services.json
+          # 3. Write google-services.json with matched package name
           mkdir -p app
           cat <<EOF > app/google-services.json
           {
